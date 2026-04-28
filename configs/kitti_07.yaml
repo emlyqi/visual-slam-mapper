@@ -1,0 +1,15 @@
+# not integrated into codebase
+dataset:
+  root: data/kitti
+  calib_file: data/kitti/calib.txt
+  gt_poses: data/kitti/poses/07.txt
+
+vo:
+  reprojection_threshold: 2.0
+  ransac_iterations: 100
+  min_inliers: 10
+
+keyframe:
+  translation_threshold: 1.0    # meters
+  rotation_threshold: 10.0      # degrees
+  feature_ratio_threshold: 0.7
