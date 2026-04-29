@@ -4,13 +4,12 @@ First module of a longer SLAM project. Goal of this stage: a stereo VO pipeline 
 
 ## Pipeline
 
-Per frame, the loop runs:
+For frame 0: detect ORB features, run SGBM stereo, triangulate to get the initial keyframe's 3D points. Subsequent frames run:
 
-1. If a new keyframe is needed: detect ORB features in the left image, run SGBM stereo matching for a dense disparity map, and triangulate each keypoint into a 3D point in the keyframe's camera frame.
-2. Otherwise: track the keyframe's features into the current frame using Lucas-Kanade optical flow, filtered with a forward-backward consistency check.
-3. Run PnP-RANSAC against the keyframe's 3D points and the current frame's tracked 2D positions to estimate the relative pose.
-4. Compose with the keyframe's world pose to get the current frame's world pose. Append to trajectory.
-5. Check the keyframe criterion (translation, rotation, or feature loss). If it fires, this frame becomes the new keyframe.
+1. Track the keyframe's features into the current frame using Lucas-Kanade optical flow, filtered with a forward-backward consistency check.
+2. Run PnP-RANSAC against the keyframe's 3D points and the tracked 2D positions to estimate the current frame's pose relative to the keyframe.
+3. Compose with the keyframe's world pose to get the current frame's world pose. Append to trajectory.
+4. Check the keyframe criterion (translation, rotation, or feature loss). If it fires, re-detect ORB features in the current frame, run SGBM stereo, triangulate fresh 3D points, and treat this frame as the new keyframe (with `kf_pose` = current frame's world pose).
 
 Module layout in `src/vo/`: `features.py` (ORB + LK), `stereo.py` (SGBM + triangulation), `motion.py` (PnP wrapper), `keyframes.py` (criterion), `trajectory.py` (SE(3) accumulation + KITTI I/O). Main loop in `scripts/run_vo.py`.
 
@@ -21,7 +20,7 @@ Module layout in `src/vo/`: `features.py` (ORB + LK), `stereo.py` (SGBM + triang
 Two alternatives I considered:
 
 - **Monocular 2D-2D essential matrix.** Recovers translation only as a unit vector, no metric scale. Defeats the point of having stereo.
-- **Stereo-stereo point cloud alignment** (triangulate at both frames, then ICP/Procrustes). Both sides of the alignment carry stereo depth noise, especially in the Z direction (1px disparity error at 50m is roughly 3m depth error), so errors compound on both ends.
+- **Stereo-stereo point cloud alignment** (triangulate at both frames, then Procrustes-style alignment). Both sides of the alignment carry stereo depth noise, especially in the Z direction (1px disparity error at 50m is roughly 3m depth error), so errors compound on both ends.
 
 PnP triangulates 3D once at the keyframe and uses 2D pixel observations (sub-pixel precision) at every subsequent frame. The optimization minimizes reprojection error in pixel space, which is much better-conditioned than aligning two noisy point clouds.
 
@@ -32,7 +31,7 @@ Two reasons to anchor PnP back to a keyframe instead of chaining `frame[i-1] →
 1. **Stereo cost.** SGBM runs once per keyframe (~100 times on KITTI 07) instead of once per frame (1101 times). Roughly 10x speedup on the heaviest operation.
 2. **Drift.** Each PnP has small error. Frame-to-frame chains accumulate error every frame. Keyframe-anchored estimates the cumulative kf→curr motion in a single PnP call, so within a keyframe segment, errors don't compound. Drift only accumulates *between* keyframes (~10 frames typically).
 
-Optical flow still chains across intermediate frames — that's just to keep features alive long enough to track them back to the keyframe. The pose math always anchors to the keyframe.
+Optical flow still chains across intermediate frames - this is just to keep features alive long enough to track them back to the keyframe. The pose math always anchors to the keyframe.
 
 ### Parameter choices
 
@@ -49,7 +48,7 @@ Optical flow still chains across intermediate frames — that's just to keep fea
 | Keyframe rotation threshold | 10° | Significant view change. Straight driving stays well under. |
 | Keyframe feature ratio | 0.7 | Once 30% of the keyframe's tracks are lost, the remaining set is too sparse for stable PnP. |
 
-The keyframe thresholds come from the original ORB-SLAM paper. The depth bounds came from working out the depth-uncertainty math for KITTI's stereo rig and picking a cap where uncertainty crosses 10% of measurement value.
+The keyframe thresholds come from common defaults used across classical stereo VO implementations. The depth bounds came from working out the depth-uncertainty math for KITTI's stereo rig and picking a cap where uncertainty crosses 10% of measurement value.
 
 ### SE(3) composition direction
 
@@ -79,7 +78,7 @@ The trajectory matches GT well in x and z but drifts in y (vertical):
 
 ![xyz over time](results/plots/kitti_07_trajectory_xyz.png)
 
-Y-axis ends 6m below GT after 700m of nearly-flat driving. Without an absolute gravity reference, small per-frame pitch errors integrate into elevation drift. This is the classic vision-only failure mode and is the main motivation for adding IMU fusion later.
+Y-axis ends 6m below GT after 700m of nearly-flat driving. Without an absolute gravity reference, small per-frame pitch errors integrate into elevation drift. This is a vision-only failure mode and is the main motivation for adding IMU fusion later.
 
 ## Limitations
 
