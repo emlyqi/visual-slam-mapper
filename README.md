@@ -1,8 +1,6 @@
-# Visual SLAM Mapper
+# SLAM from Scratch
 
-Stereo visual odometry on KITTI. The current module estimates 6-DOF camera trajectory from a stereo image stream using ORB features, Lucas-Kanade optical flow, and PnP-RANSAC pose estimation, with keyframe-anchored tracking.
-
-Long-term goal: extend this into an indoor mapping system (loop closure, IMU fusion, dense reconstruction, 2D semantic floor plan), validated on my own custom sensor rig.
+Visual SLAM in Python, built from scratch and validated on KITTI Odometry. Currently implements stereo visual odometry; loop closure, pose graph optimization, and IMU fusion in progress.
 
 ![KITTI 07 trajectory](results/plots/kitti_07_trajectory_trajectories.png)
 
@@ -20,17 +18,24 @@ Long-term goal: extend this into an indoor mapping system (loop closure, IMU fus
 ## Setup
 
 ```bash
-git clone https://github.com/[your-username]/visual-slam-mapper
-cd visual-slam-mapper
-python -m venv .venv && source .venv/Scripts/activate   # Windows: source .venv/Scripts/activate
+git clone https://github.com/emlyqi/kitti-slam
+cd kitti-slam
+python -m venv .venv
+source .venv/bin/activate         # macOS/Linux
+.venv\Scripts\activate            # Windows
 pip install -r requirements.txt
 ```
 
 Download KITTI Odometry sequence 07 (grayscale + calibration + ground truth poses) and arrange under `data/kitti/`:
 
+```
 data/kitti/
-├── image_0, image_1, calib.txt, times.txt
+├── image_0/
+├── image_1/
+├── calib.txt
+├── times.txt
 └── poses/07.txt
+```
 
 ## Run
 
