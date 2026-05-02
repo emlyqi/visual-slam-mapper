@@ -5,7 +5,7 @@ import numpy as np
 def compute_disparity(left_image, right_image, num_disparities=128, block_size=5):
     """
     Compute disparity map from rectified stereo pair.
-    Returns float32 disparity array in pixels, where valid disparities are >= 0.
+    Returns float32 disparity array in pixels. Invalid pixels return -1.0; valid disparities are positive.
     """
     stereo = cv2.StereoSGBM_create(
         minDisparity=0,
@@ -34,8 +34,9 @@ def triangulate_points(points_2d, disparity, K, baseline, min_depth=1.0, max_dep
         min_depth: minimum depth for filtering
         max_depth: maximum depth for filtering
     Returns:
-        (M, 3) array of 3D points in the left camera frame, where M <= N after filtering
-        (N,) boolean array indicating which input points are valid after depth filtering
+        points_3d: (N, 3) array of 3D points in the left camera frame.
+            Entries where `valid` is False are not meaningful.
+        valid: (N,) boolean array indicating which input points are valid after depth filtering
     """
     
     fx, fy = K[0, 0], K[1, 1]
@@ -67,4 +68,4 @@ def triangulate_points(points_2d, disparity, K, baseline, min_depth=1.0, max_dep
     Y = (v - cy) * Z / fy
 
     points_3d = np.stack((X, Y, Z), axis=-1)
-    return points_3d[valid], valid
+    return points_3d, valid

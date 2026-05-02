@@ -15,17 +15,19 @@ from src.data.kitti_loader import KittiSequence
 from src.utils.transforms import invert_se3
 from src.vo.features import detect_features, track_features
 from src.vo.keyframes import should_make_keyframe
+from src.vo.keyframe_logger import KeyframeLogger
 from src.vo.motion import estimate_motion
 from src.vo.stereo import compute_disparity, triangulate_points
 from src.vo.trajectory import Trajectory
 
 
-def run_vo(data_path, output_path, n_features=2000):
+def run_vo(data_path, output_path, kf_output_path=None, n_features=2000):
     seq = KittiSequence(data_path)
     K, baseline = seq.K, seq.baseline
 
     # trajectory initialized w identity pose at frame 0
     traj = Trajectory()
+    kf_logger = KeyframeLogger()
 
     # keyframe state - set when a keyframe is created, used until it expires
     kf_pose = np.eye(4) # keyframe's pose in world coords (T_world_from_kf)
@@ -37,18 +39,28 @@ def run_vo(data_path, output_path, n_features=2000):
     prev_2d = None # (M, 2) 2D pixel locations of surviving features tracked in prev frame
 
     for i in tqdm(range(len(seq)), desc="VO"):
-        left, right, _ = seq[i]
+        left, right, ts = seq[i]
 
         ### first frame: just initialize keyframe state
         if i == 0:
-            pts2d = detect_features(left, n_features=n_features)
+            pts2d, descriptors = detect_features(left, n_features=n_features, return_descriptors=True)
             disp = compute_disparity(left, right)
             pts3d, valid = triangulate_points(pts2d, disp, K, baseline)
-            kf_3d = pts3d
+            kf_3d = pts3d[valid]
             n_kf_features = len(kf_3d)
             prev_image = left
             prev_2d = pts2d[valid]
             # trajectory already has identity pose from ctor
+
+            # log the initial keyframe (frame 0, identity pose)
+            kf_logger.add(
+                frame_idx=i,
+                pose=np.eye(4),
+                points_2d=pts2d[valid],
+                points_3d=pts3d[valid],
+                descriptors=descriptors[valid],
+                timestamp=ts,
+            )
             continue
 
         ### every other frame: PnP first, ALWAYS!
@@ -64,14 +76,24 @@ def run_vo(data_path, output_path, n_features=2000):
         if not success:
             # PnP failed - repeat last pose, force keyframe refresh
             traj.poses.append(traj.poses[-1].copy())
-            pts2d = detect_features(left, n_features=n_features)
+            pts2d, descriptors = detect_features(left, n_features=n_features, return_descriptors=True)
             disp = compute_disparity(left, right)
             pts3d, valid = triangulate_points(pts2d, disp, K, baseline)
-            kf_3d = pts3d
+            kf_3d = pts3d[valid]
             n_kf_features = len(kf_3d)
             kf_pose = traj.poses[-1].copy() # keep same world pose since we didn't move
             prev_image = left
             prev_2d = pts2d[valid]
+
+            # log the recovery keyframe
+            kf_logger.add(
+                frame_idx=i,
+                pose=kf_pose,
+                points_2d=pts2d[valid],
+                points_3d=pts3d[valid],
+                descriptors=descriptors[valid],
+                timestamp=ts,
+            )
             continue
 
         # compute and append this frame's pose
@@ -85,14 +107,24 @@ def run_vo(data_path, output_path, n_features=2000):
         ### check keyframe criterion
         if should_make_keyframe(T_motion_kf_to_curr, len(curr_2d), n_kf_features):
             # this frame becomes new keyframe - redetect + retriangulate to refresh 3D points
-            pts2d = detect_features(left, n_features=n_features)
+            pts2d, descriptors = detect_features(left, n_features=n_features, return_descriptors=True)
             disp = compute_disparity(left, right)
             pts3d, valid = triangulate_points(pts2d, disp, K, baseline)
-            kf_3d = pts3d
+            kf_3d = pts3d[valid]
             n_kf_features = len(kf_3d)
             kf_pose = pose_curr # new keyframe's world pose will be curr frame's world pose
             prev_image = left
             prev_2d = pts2d[valid] 
+
+            # log the new keyframe
+            kf_logger.add(
+                frame_idx=i,
+                pose=kf_pose,
+                points_2d=pts2d[valid],
+                points_3d=pts3d[valid],
+                descriptors=descriptors[valid],
+                timestamp=ts,
+            )
         else :
             # keep tracking from this frame next iteration
             kf_3d = kf_3d_alive
@@ -102,8 +134,17 @@ def run_vo(data_path, output_path, n_features=2000):
     ### save trajectory
     traj.save_kitti(output_path)
     print(f"Saved trajectory to {output_path} ({len(traj)} poses)")
+
+    ### save keyframes
+    if kf_output_path is not None:
+        kf_logger.save(kf_output_path)
+
     return traj
 
 
 if __name__ == "__main__":
-    run_vo("data/kitti", "results/trajectories/kitti_07_vo.txt")
+    run_vo(
+        "data/kitti", 
+        "results/trajectories/kitti_07_vo.txt", 
+        kf_output_path="results/keyframes/kitti_07",
+    )

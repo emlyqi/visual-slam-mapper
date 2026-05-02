@@ -2,16 +2,39 @@ import cv2
 import numpy as np
 
 
-def detect_features(image, n_features=2000):
+# module-level ORB detector, reused across frames (faster than recreating per call)
+_orb_detector = None
+
+
+def _get_orb(n_features):
+    """Lazy-init module-level ORB detector. Recreates if n_features changes."""
+    global _orb_detector
+    if _orb_detector is None or _orb_detector.getMaxFeatures() != n_features:
+        _orb_detector = cv2.ORB_create(n_features)
+    return _orb_detector
+
+
+def detect_features(image, n_features=2000, return_descriptors=False):
     """
     Detects ORB keypoints in the given image.
-    Returns (N, 2) float32 array of keypoint pixel coordinates.
+    Returns:
+        points: (N, 2) float32 array of keypoint pixel coordinates
+        descriptors: (N, 32) uint8 array of ORB descriptors (if return_descriptors=True)
     """
     
-    orb = cv2.ORB_create(n_features)
-    keypoints = orb.detect(image, None)
-    points = np.array([kp.pt for kp in keypoints], dtype=np.float32)
-    return points
+    orb = _get_orb(n_features)
+
+    if return_descriptors:
+        keypoints, descriptors = orb.detectAndCompute(image, None)
+        if descriptors is None:
+            # no keypoints found, return empty arrays
+            return np.empty((0, 2), dtype=np.float32), np.empty((0, 32), dtype=np.uint8)
+        points = np.array([kp.pt for kp in keypoints], dtype=np.float32)
+        return points, descriptors
+    else: 
+        keypoints = orb.detect(image, None)
+        points = np.array([kp.pt for kp in keypoints], dtype=np.float32)
+        return points
 
 
 def track_features(prev_image, curr_image, prev_points):

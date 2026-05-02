@@ -1,9 +1,20 @@
-__pycache__/
+__pycache__
 *.pyc
-.venv/
-venv/
-data/
+.venv
+venv
+/data
 *.ply
-.ipynb_checkpoints/
-.vscode/
-.evo/
+*.pkl
+.ipynb_checkpoints
+.vscode
+/.evo
+
+# regenerable heavy outputs
+results/keyframes/*.npz
+results/vocab/*.npz
+results/reconstructions/
+
+# but keep small text artifacts
+!results/keyframes/*.json
+!results/trajectories/*.txt
+!results/vocab/*.json
