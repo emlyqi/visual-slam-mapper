@@ -18,7 +18,7 @@ class LoopClosure:
     """One verified loop closure between two keyframes."""
     kf_a: int # query keyframe index
     kf_b: int # matched keyframe index
-    T_b_from_a: np.ndarray # (4, 4) SE(3) transform from kf_a's camera frame to kf_b's camera frame
+    T_a_to_b: np.ndarray # (4, 4) SE(3) transform from kf_a's camera frame to kf_b's camera frame
     n_inliers: int # number of inliers in geometric verification
     n_matches: int # number of descriptor matches before geometric verification
     bow_score: float # BoW similarity score between the two keyframes
@@ -59,7 +59,7 @@ def detect_loops(keyframes, database: BowDatabase, K, top_k=5,
                 continue
 
             # geometric verification
-            success, T_b_from_a, n_inliers, n_matches = verify_pair(
+            success, T_a_to_b, n_inliers, n_matches = verify_pair(
                 kf_a=keyframes[query_idx],
                 kf_b=keyframes[kf_b_idx],
                 K=K,
@@ -71,7 +71,7 @@ def detect_loops(keyframes, database: BowDatabase, K, top_k=5,
                 loops.append(LoopClosure(
                     kf_a=int(query_idx),
                     kf_b=int(kf_b_idx),
-                    T_b_from_a=T_b_from_a,
+                    T_a_to_b=T_a_to_b,
                     n_inliers=n_inliers,
                     n_matches=n_matches,
                     bow_score=float(score),

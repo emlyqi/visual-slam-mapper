@@ -16,7 +16,7 @@ real feature correspondences and a recoverable rigid transformation.
 import cv2
 import numpy as np
 
-from src.utils.transforms import make_se3
+from src.utils.transforms import make_se3, invert_se3
 
 
 # brute-force matcher with Hamming distance for ORB binary descriptors
@@ -106,6 +106,9 @@ def verify_pair(kf_a, kf_b, K, min_inliers=20, reproj_threshold=2.0):
 
     # step 4: convert rvec+tvec to SE(3) pose
     R, _ = cv2.Rodrigues(rvec)
-    T_b_from_a = make_se3(R, tvec.flatten())
-
-    return True, T_b_from_a, len(inliers), n_matches
+    # PnP returns the transform that takes points from kf_a's frame to kf_b's camera
+    # (for projection into kf_b's image). For pose graph use, we want T_a_to_b in
+    # the GTSAM BetweenFactor sense: pose_a.inverse() @ pose_b. These are inverses.
+    T_pnp = make_se3(R, tvec.flatten())
+    T_a_to_b = invert_se3(T_pnp)
+    return True, T_a_to_b, len(inliers), n_matches

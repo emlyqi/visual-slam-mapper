@@ -40,7 +40,7 @@ def main():
 
     print(f"\nFound {len(loops)} verified loop closures")
     for loop in sorted(loops, key=lambda l: -l.n_inliers)[:20]: # print top 20 loops by inlier count
-        t = loop.T_b_from_a[:3, 3]
+        t = loop.T_a_to_b[:3, 3]
         print(f"  kf {loop.kf_a:3d} <-> kf {loop.kf_b:3d}: "
             f"inliers={loop.n_inliers:3d}/{loop.n_matches:3d} "
             f"bow={loop.bow_score:.2f} "
@@ -60,7 +60,7 @@ def main():
                 "kf_a": l.kf_a, "kf_b": l.kf_b,
                 "n_inliers": l.n_inliers, "n_matches": l.n_matches,
                 "bow_score": l.bow_score,
-                "T_b_from_a": l.T_b_from_a.tolist(),
+                "T_a_to_b": l.T_a_to_b.tolist(),
             }
             for l in loops
         ],
