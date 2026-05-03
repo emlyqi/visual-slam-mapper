@@ -80,15 +80,23 @@ def load_keyframes(npz_path):
         path = path.with_suffix('.npz')
 
     data = np.load(str(path), allow_pickle=True)
-    n = len(data['frame_indices'])
+    # read all arrays into memory first - npz lazily reads each access
+    frame_indices = data['frame_indices']
+    poses = data['poses']
+    points_2d = data['points_2d']
+    points_3d = data['points_3d']
+    descriptors = data['descriptors']
+    timestamps = data['timestamps']
+
+    n = len(frame_indices)
     keyframes = []
     for i in range(n):
         keyframes.append({
-            'frame_idx': int(data['frame_indices'][i]),
-            'pose': data['poses'][i],
-            'points_2d': data['points_2d'][i],
-            'points_3d': data['points_3d'][i],
-            'descriptors': data['descriptors'][i],
-            'timestamp': float(data['timestamps'][i]),
+            'frame_idx': int(frame_indices[i]),
+            'pose': poses[i],
+            'points_2d': points_2d[i],
+            'points_3d': points_3d[i],
+            'descriptors': descriptors[i],
+            'timestamp': float(timestamps[i]),
         })
     return keyframes

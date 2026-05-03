@@ -17,6 +17,8 @@ Visual SLAM in Python, built from scratch and validated on KITTI Odometry. Curre
 
 ## Setup
 
+**Note**: GTSAM doesn't have Windows pip wheels. Use Linux, macOS, or WSL2.
+
 ```bash
 git clone https://github.com/emlyqi/kitti-slam
 cd kitti-slam
