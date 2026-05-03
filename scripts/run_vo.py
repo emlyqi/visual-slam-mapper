@@ -12,6 +12,7 @@ import numpy as np
 from tqdm import tqdm
 
 from src.data.kitti_loader import KittiSequence
+from src.utils.config import parse_config_arg
 from src.utils.transforms import invert_se3
 from src.vo.features import detect_features, track_features
 from src.vo.keyframes import should_make_keyframe
@@ -143,8 +144,10 @@ def run_vo(data_path, output_path, kf_output_path=None, n_features=2000):
 
 
 if __name__ == "__main__":
+    cfg = parse_config_arg()
     run_vo(
-        "data/kitti", 
-        "results/trajectories/kitti_07_vo.txt", 
-        kf_output_path="results/keyframes/kitti_07",
+        cfg.data_dir,
+        str(cfg.vo_trajectory_path),
+        kf_output_path=str(cfg.keyframes_basename),
+        n_features=cfg.n_features,
     )

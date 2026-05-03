@@ -3,6 +3,7 @@
 import numpy as np
 
 from src.loop_closure.vocabulary import Vocabulary
+from src.utils.config import parse_config_arg
 from src.vo.keyframe_logger import load_keyframes
 
 
@@ -21,8 +22,9 @@ def train_vocabulary(keyframes_path, output_path, k=1000):
 
 
 if __name__ == "__main__":
+    cfg = parse_config_arg()
     train_vocabulary(
-        keyframes_path="results/keyframes/kitti_07.npz",
-        output_path="results/vocab/kitti_07_vocab.npz",
-        k=1000,
+        keyframes_path=str(cfg.keyframes_path),
+        output_path=str(cfg.vocab_path),
+        k=cfg.vocab_k,
     )

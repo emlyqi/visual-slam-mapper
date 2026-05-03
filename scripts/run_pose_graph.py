@@ -11,6 +11,7 @@ import numpy as np
 from src.loop_closure.detector import LoopClosure
 from src.pose_graph.builder import build_pose_graph, extract_poses
 from src.pose_graph.optimizer import optimize
+from src.utils.config import parse_config_arg
 from src.vo.keyframe_logger import load_keyframes
 
 
@@ -42,20 +43,29 @@ def save_kitti_trajectory(poses_4x4, output_path):
 
 
 def main():
+    cfg = parse_config_arg()
+
     # load inputs
     print("Loading keyframes and loops...")
-    keyframes = load_keyframes("results/keyframes/kitti_07.npz")
-    loops = load_loops("results/loops/kitti_07_loops.json")
+    keyframes = load_keyframes(str(cfg.keyframes_path))
+    loops = load_loops(str(cfg.loops_path))
     print(f"  {len(keyframes)} keyframes, {len(loops)} verified loops")
 
     # save un-optimized keyframe trajectory for comparison
     initial_poses = np.stack([kf['pose'] for kf in keyframes])
-    save_kitti_trajectory(initial_poses, "results/trajectories/kitti_07_initial.txt")
-    print("Saved un-optimized trajectory to results/trajectories/kitti_07_initial.txt")
+    save_kitti_trajectory(initial_poses, str(cfg.initial_trajectory_path))
+    print(f"Saved un-optimized trajectory to {cfg.initial_trajectory_path}")
 
     # build pose graph
     print("\nBuilding pose graph...")
-    graph, initial = build_pose_graph(keyframes, loops)
+    graph, initial = build_pose_graph(
+        keyframes, loops,
+        odom_trans_sigma=cfg.odom_trans_sigma,
+        odom_rot_sigma_deg=cfg.odom_rot_sigma_deg,
+        loop_trans_sigma_base=cfg.loop_trans_sigma_base,
+        loop_rot_sigma_deg_base=cfg.loop_rot_sigma_deg_base,
+        loop_inlier_ref=cfg.loop_inlier_ref,
+    )
 
     # optimize
     print("\nOptimizing pose graph...")
@@ -65,11 +75,11 @@ def main():
     optimized_poses = extract_poses(result, n=len(keyframes))
 
     # save optimized trajectory
-    save_kitti_trajectory(optimized_poses, "results/trajectories/kitti_07_optimized.txt")
-    print("Saved optimized trajectory to results/trajectories/kitti_07_optimized.txt")
+    save_kitti_trajectory(optimized_poses, str(cfg.optimized_trajectory_path))
+    print(f"Saved optimized trajectory to {cfg.optimized_trajectory_path}")
 
     # save optimization info
-    info_path = Path("results/trajectories/kitti_07_optimization_info.json")
+    info_path = cfg.optimization_info_path
     info_path.parent.mkdir(parents=True, exist_ok=True)
     with open(info_path, 'w') as f:
         json.dump(info, f, indent=2)
@@ -77,9 +87,9 @@ def main():
 
     print("\n=== Done ===")
     print("Next: interpolate to full trajectory, then evaluate with evo")
-    print("  python -m scripts.interpolate_full_trajectory")
-    print("  evo_ape kitti data/kitti/poses/07.txt results/trajectories/kitti_07_vo.txt --align")
-    print("  evo_ape kitti data/kitti/poses/07.txt results/trajectories/kitti_07_optimized_full.txt --align")
+    print(f"  python -m scripts.interpolate_full_trajectory --config configs/kitti_{cfg.sequence_id}.yaml")
+    print(f"  evo_ape kitti {cfg.gt_path} {cfg.vo_trajectory_path} --align")
+    print(f"  evo_ape kitti {cfg.gt_path} {cfg.optimized_full_trajectory_path} --align")
 
 if __name__ == "__main__":
     main()

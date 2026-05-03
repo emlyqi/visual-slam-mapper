@@ -9,12 +9,14 @@ venv
 .vscode
 /.evo
 
-# regenerable heavy outputs
-results/keyframes/*.npz
-results/vocab/*.npz
-results/reconstructions/
+# regenerable heavy outputs (any sequence)
+results/*/keyframes/*.npz
+results/*/vocab/*.npz
+results/*/reconstructions/
 
 # but keep small text artifacts
-!results/keyframes/*.json
-!results/trajectories/*.txt
-!results/vocab/*.json
+!results/*/keyframes/*.json
+!results/*/trajectories/*.txt
+!results/*/loops/*.json
+!results/*/plots/*.png
+!results/*/plots/*.zip

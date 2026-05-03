@@ -1,6 +1,6 @@
-sequence_id: "07"
-data_dir: "data/kitti/07"
-gt_path: "data/kitti/07/poses/07.txt"
+sequence_id: "05"
+data_dir: "data/kitti/05"
+gt_path: "data/kitti/05/poses/05.txt"
 
 # VO params
 keyframe_translation_threshold: 1.0

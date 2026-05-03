@@ -15,6 +15,7 @@ import json
 from pathlib import Path
 import numpy as np
 
+from src.utils.config import parse_config_arg
 from src.utils.transforms import invert_se3
 from src.vo.keyframe_logger import load_keyframes
 
@@ -41,22 +42,24 @@ def save_kitti_trajectory(poses_4x4, output_path):
 
 
 def main():
+    cfg = parse_config_arg()
+
     # load original VO trajectory (all 1101 frames)
     print("Loading original VO trajectory...")
-    vo_poses = load_kitti_trajectory("results/trajectories/kitti_07_vo.txt")
+    vo_poses = load_kitti_trajectory(str(cfg.vo_trajectory_path))
     n_frames = len(vo_poses)
     print(f"  Loaded {n_frames} VO frames")
 
     # load keyframes
     print("Loading keyframes...")
-    keyframes = load_keyframes("results/keyframes/kitti_07.npz")
+    keyframes = load_keyframes(str(cfg.keyframes_path))
     kf_indices = np.array([kf['frame_idx'] for kf in keyframes])
     n_keyframes = len(keyframes)
     print(f"  Loaded {n_keyframes} keyframes")
 
     # load optimized keyframe poses
     print("Loading optimized keyframe poses...")
-    optimized_kf_poses = load_kitti_trajectory("results/trajectories/kitti_07_optimized.txt")
+    optimized_kf_poses = load_kitti_trajectory(str(cfg.optimized_trajectory_path))
     assert len(optimized_kf_poses) == n_keyframes, \
         f"Expected {n_keyframes} optimized poses, got {len(optimized_kf_poses)}"
     print(f"  Loaded optimized poses for {len(optimized_kf_poses)} keyframes")
@@ -87,8 +90,8 @@ def main():
         full_poses[f] = optimized_kf_poses[kf] @ T_anchor_to_f
 
     # save
-    output_path = "results/trajectories/kitti_07_optimized_full.txt"
-    save_kitti_trajectory(full_poses, output_path)
+    output_path = cfg.optimized_full_trajectory_path
+    save_kitti_trajectory(full_poses, str(output_path))
     print(f"Saved {n_frames}-frame optimized trajectory to {output_path}")
 
 

@@ -8,18 +8,21 @@ from src.data.kitti_loader import KittiSequence
 from src.loop_closure.database import BowDatabase
 from src.loop_closure.detector import detect_loops
 from src.loop_closure.vocabulary import Vocabulary
+from src.utils.config import parse_config_arg
 from src.vo.keyframe_logger import load_keyframes
 
 
 def main():
-    seq = KittiSequence("data/kitti")
+    cfg = parse_config_arg()
+
+    seq = KittiSequence(cfg.data_dir)
     K = seq.K
 
     print("Loading vocabulary...")
-    vocab = Vocabulary().load("results/vocab/kitti_07_vocab.npz")
+    vocab = Vocabulary().load(str(cfg.vocab_path))
 
     print("Loading keyframes...")
-    keyframes = load_keyframes("results/keyframes/kitti_07.npz")
+    keyframes = load_keyframes(str(cfg.keyframes_path))
     print(f"Loaded {len(keyframes)} keyframes")
 
     print("Building BoW database...")
@@ -31,11 +34,11 @@ def main():
         keyframes=keyframes,
         database=db,
         K=K,
-        top_k=5,
-        min_bow_score=0.5,
-        temporal_window=20,
-        min_inliers=20,
-        reproj_threshold=2.0,
+        top_k=cfg.loop_top_k,
+        min_bow_score=cfg.loop_min_bow_score,
+        temporal_window=cfg.loop_temporal_window,
+        min_inliers=cfg.loop_min_inliers,
+        reproj_threshold=cfg.loop_reproj_threshold,
     )
 
     print(f"\nFound {len(loops)} verified loop closures")
@@ -47,13 +50,14 @@ def main():
             f"trans=[{t[0]:+.2f}, {t[1]:+.2f}, {t[2]:+.2f}]")
 
     # save
-    out_path = Path("results/loops/kitti_07_loops.json")
+    out_path = cfg.loops_path
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_data = {
         "n_loops": len(loops),
         "params": {
-            "top_k": 5, "min_bow_score": 0.5, "temporal_window": 20,
-            "min_inliers": 20, "reproj_threshold": 2.0,
+            "top_k": cfg.loop_top_k, "min_bow_score": cfg.loop_min_bow_score,
+            "temporal_window": cfg.loop_temporal_window,
+            "min_inliers": cfg.loop_min_inliers, "reproj_threshold": cfg.loop_reproj_threshold,
         },
         "loops": [
             {
