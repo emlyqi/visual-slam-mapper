@@ -15,29 +15,42 @@ Visual SLAM in Python, built from scratch and validated on KITTI Odometry. Curre
 | Path length ratio (VO/GT) | 1.001 |
 | Runtime | ~2 min for 1101 frames on CPU |
 
+## Requirements
+
+This project requires **Linux, macOS, or WSL2**. The `gtsam` pip wheel has a known bug on Python 3.10 + Ubuntu 22.04 that causes segfaults on basic operations (see [borglab/gtsam#1880](https://github.com/borglab/gtsam/issues/1880)). The conda-forge build works correctly, so this project uses conda for `gtsam` and pip for everything else.
+
 ## Setup
 
-**Note**: GTSAM doesn't have Windows pip wheels. Use Linux, macOS, or WSL2.
+Install miniconda if you don't have it:
 
-```bash
-git clone https://github.com/emlyqi/kitti-slam
-cd kitti-slam
-python -m venv .venv
-source .venv/bin/activate         # macOS/Linux
-.venv\Scripts\activate            # Windows
+​```bash
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh -b -p ~/miniconda3
+source ~/miniconda3/bin/activate
+​```
+
+Create the environment and install dependencies:
+
+​```bash
+git clone https://github.com/emlyqi/slam-from-scratch
+cd slam-from-scratch
+
+conda env create -f environment.yml
+conda activate slam
+
 pip install -r requirements.txt
-```
+​```
 
 Download KITTI Odometry sequence 07 (grayscale + calibration + ground truth poses) and arrange under `data/kitti/`:
 
-```
+​```
 data/kitti/
 ├── image_0/
 ├── image_1/
 ├── calib.txt
 ├── times.txt
 └── poses/07.txt
-```
+​```
 
 ## Run
 

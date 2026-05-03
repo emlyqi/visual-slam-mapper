@@ -1,0 +1,7 @@
+name: slam
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - gtsam=4.2
+  - pip
