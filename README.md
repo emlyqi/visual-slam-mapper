@@ -1,16 +1,30 @@
 # SLAM from Scratch
 
-Visual SLAM in Python, built from scratch and validated on KITTI Odometry. Currently implements stereo visual odometry; loop closure, pose graph optimization, and IMU fusion in progress.
+Visual SLAM in Python, built from scratch and validated on KITTI Odometry. Implements stereo visual odometry, BoW loop closure detection, and pose graph optimization with GTSAM. IMU fusion in progress.
 
-![KITTI 07 trajectory](results/plots/kitti_07_trajectory_trajectories.png)
+![KITTI 05 trajectory](results/kitti_05/plots/trajectory_comparison_trajectories.png)
 
-## Results on KITTI 07
+## Results
 
-695m urban driving sequence, evaluated against GPS/IMU ground truth.
+### KITTI 05 - full pipeline
+
+2.7km urban driving with multiple loop revisits, evaluated against GPS/IMU ground truth.
+
+| Metric | VO baseline | After PGO |
+|---|---|---|
+| ATE RMSE | 7.65 m | **2.03 m** (73% reduction) |
+| ATE max | 19.48 m | 4.56 m |
+| RPE (100m) | — | 1.70 m / 100m |
+| Loops detected | — | 1447 |
+| Runtime | ~12 min for 2761 frames on CPU | ~3 min loop detection + <1s PGO |
+
+### KITTI 07 - VO only
+
+695m urban driving with loops only at trajectory endpoints. PGO does not improve ATE on this sequence (see writeup for analysis).
 
 | Metric | Value |
 |---|---|
-| ATE RMSE | 2.4 m |
+| ATE RMSE | 2.42 m |
 | RPE (100m) | 1.37 m / 100m (1.37%) |
 | Path length ratio (VO/GT) | 1.001 |
 | Runtime | ~2 min for 1101 frames on CPU |
@@ -23,15 +37,15 @@ This project requires **Linux, macOS, or WSL2**. The `gtsam` pip wheel has a kno
 
 Install miniconda if you don't have it:
 
-​```bash
+```bash
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 bash Miniconda3-latest-Linux-x86_64.sh -b -p ~/miniconda3
 source ~/miniconda3/bin/activate
-​```
+```
 
 Create the environment and install dependencies:
 
-​```bash
+```bash
 git clone https://github.com/emlyqi/slam-from-scratch
 cd slam-from-scratch
 
@@ -39,26 +53,36 @@ conda env create -f environment.yml
 conda activate slam
 
 pip install -r requirements.txt
-​```
+```
 
-Download KITTI Odometry sequence 07 (grayscale + calibration + ground truth poses) and arrange under `data/kitti/`:
+Download KITTI Odometry sequences (grayscale + calibration + ground truth poses) and arrange under `data/kitti/`:
 
-​```
+```
 data/kitti/
-├── image_0/
-├── image_1/
-├── calib.txt
-├── times.txt
-└── poses/07.txt
-​```
+├── 05/
+│   ├── image_0/
+│   ├── image_1/
+│   ├── poses/05.txt
+│   ├── calib.txt
+│   └── times.txt
+└── 07/
+└── (same structure)
+```
 
 ## Run
 
+The pipeline is config-driven. Replace `kitti_05` with `kitti_07` (or any new config) to switch sequences.
+
 ```bash
-python -m scripts.run_vo                          # produces trajectory file
-python -m scripts.debug.check_trajectory_quality  # sanity-check stats vs GT
-evo_ape kitti data/kitti/poses/07.txt results/trajectories/kitti_07_vo.txt --align --plot
-evo_rpe kitti data/kitti/poses/07.txt results/trajectories/kitti_07_vo.txt --align --delta 100 --delta_unit m --plot
+python -m scripts.run_vo --config configs/kitti_05.yaml
+python -m scripts.train_vocabulary --config configs/kitti_05.yaml
+python -m scripts.detect_loops --config configs/kitti_05.yaml
+python -m scripts.run_pose_graph --config configs/kitti_05.yaml
+python -m scripts.interpolate_full_trajectory --config configs/kitti_05.yaml
+
+evo_ape kitti data/kitti/05/poses/05.txt results/kitti_05/trajectories/vo.txt --align --plot
+evo_ape kitti data/kitti/05/poses/05.txt results/kitti_05/trajectories/optimized_full.txt --align --plot
+evo_rpe kitti data/kitti/05/poses/05.txt results/kitti_05/trajectories/optimized_full.txt --align --delta 100 --delta_unit m --plot
 ```
 
 ## Read more
