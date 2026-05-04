@@ -6,8 +6,6 @@ Visual SLAM in Python, built from scratch and validated on KITTI Odometry. Imple
 
 ## Results
 
-## Results
-
 ### KITTI 05 — full pipeline
 
 2.7km urban driving with multiple loop revisits, evaluated against GPS/IMU ground truth.
