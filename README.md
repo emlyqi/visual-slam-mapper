@@ -6,7 +6,9 @@ Visual SLAM in Python, built from scratch and validated on KITTI Odometry. Imple
 
 ## Results
 
-### KITTI 05 - full pipeline
+## Results
+
+### KITTI 05 — full pipeline
 
 2.7km urban driving with multiple loop revisits, evaluated against GPS/IMU ground truth.
 
@@ -14,11 +16,10 @@ Visual SLAM in Python, built from scratch and validated on KITTI Odometry. Imple
 |---|---|---|
 | ATE RMSE | 7.65 m | **2.03 m** (73% reduction) |
 | ATE max | 19.48 m | 4.56 m |
-| RPE (100m) | — | 1.70 m / 100m |
+| RPE (100m) | 1.27 m / 100m (1.27%) | 1.70 m / 100m |
 | Loops detected | — | 1447 |
-| Runtime | ~12 min for 2761 frames on CPU | ~3 min loop detection + <1s PGO |
 
-### KITTI 07 - VO only
+### KITTI 07 — VO only
 
 695m urban driving with loops only at trajectory endpoints. PGO does not improve ATE on this sequence (see writeup for analysis).
 
@@ -27,7 +28,6 @@ Visual SLAM in Python, built from scratch and validated on KITTI Odometry. Imple
 | ATE RMSE | 2.42 m |
 | RPE (100m) | 1.37 m / 100m (1.37%) |
 | Path length ratio (VO/GT) | 1.001 |
-| Runtime | ~2 min for 1101 frames on CPU |
 
 ## Requirements
 
