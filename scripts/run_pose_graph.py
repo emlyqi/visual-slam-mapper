@@ -12,6 +12,7 @@ from src.loop_closure.detector import LoopClosure
 from src.pose_graph.builder import build_pose_graph, extract_poses
 from src.pose_graph.optimizer import optimize
 from src.utils.config import parse_config_arg
+from src.utils.io import save_kitti_trajectory
 from src.vo.keyframe_logger import load_keyframes
 
 
@@ -31,15 +32,6 @@ def load_loops(path):
         ))
 
     return loops
-
-
-def save_kitti_trajectory(poses_4x4, output_path):
-    """Save (N, 4, 4) optimized poses in KITTI format (one line per pose, 12 floats)."""
-    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, 'w') as f:
-        for T in poses_4x4:
-            row = T[:3, :].flatten()
-            f.write(' '.join(f"{v:.6e}" for v in row) + '\n')
 
 
 def main():

@@ -20,7 +20,7 @@ def optimize(graph, initial, max_iterations=100, verbose=True):
     params = gtsam.LevenbergMarquardtParams()
     params.setMaxIterations(max_iterations)
     if verbose:
-        params.setVerbosityLM("TERMINATION") # print convergence info at termination
+        params.setVerbosityLM("SUMMARY") # print convergence info at each iteration
 
     optimizer = gtsam.LevenbergMarquardtOptimizer(graph, initial, params)
 

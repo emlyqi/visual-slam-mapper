@@ -23,6 +23,13 @@ class Config:
         raise AttributeError(f"Config has no key '{key}'")
 
     @property
+    def K(self):
+        """Load camera intrinsics from KITTI calib file."""
+        from src.data.kitti_loader import KittiSequence
+        seq = KittiSequence(self.data_dir)
+        return seq.K
+
+    @property
     def keyframes_path(self) -> Path:
         return self._results_root / "keyframes" / "keyframes.npz"
 
@@ -64,8 +71,24 @@ class Config:
         return self._results_root / "trajectories" / "optimization_info.json"
 
     @property
+    def landmarks_path(self):
+        return self._results_root / "landmarks" / "landmarks.npz"
+
+    @property
     def landmarks_basename(self) -> Path:
         return self._results_root / "landmarks" / "landmarks"
+
+    @property
+    def ba_optimized_trajectory_path(self) -> Path:
+        return self._results_root / "trajectories" / "ba_optimized.txt"
+
+    @property
+    def ba_optimized_full_trajectory_path(self) -> Path:
+        return self._results_root / "trajectories" / "ba_optimized_full.txt"
+        
+    @property  
+    def ba_optimization_info_path(self) -> Path:
+        return self._results_root / "trajectories" / "ba_optimization_info.json"
 
 
 def load_config(path: str) -> Config:

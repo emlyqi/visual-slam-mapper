@@ -15,24 +15,8 @@ is enforced during optimization.
 import gtsam
 import numpy as np
 
-from src.utils.transforms import invert_se3
+from src.utils.transforms import invert_se3, se3_to_pose3, pose3_to_se3
 
-
-def _se3_to_pose3(T):
-    """Convert a 4x4 SE(3) matrix to a gtsam.Pose3."""
-    R = T[:3, :3]
-    t = T[:3, 3]
-    return gtsam.Pose3(gtsam.Rot3(R), gtsam.Point3(*t))
-    
-
-def _pose3_to_se3(pose):
-    """Convert a gtsam.Pose3 to a 4x4 SE(3) matrix."""
-    R = pose.rotation().matrix()
-    t = pose.translation()
-    T = np.eye(4)
-    T[:3, :3] = R
-    T[:3, 3] = t
-    return T
 
 # sigma = standard deviation of noise in each dimension = expected error of the measurement
 # odom_trans_sigma=0.1                 : 0.1 meters of translation noise per odometry edge
@@ -68,12 +52,12 @@ def build_pose_graph(keyframes, loops,
     print("Adding prior factor on first pose to anchor graph...")
     prior_sigmas = np.array([1e-3, 1e-3, 1e-3, 1e-3, 1e-3, 1e-3])  # (r_x, r_y, r_z, t_x, t_y, t_z)
     prior_noise = gtsam.noiseModel.Diagonal.Sigmas(prior_sigmas)
-    graph.add(gtsam.PriorFactorPose3(0, _se3_to_pose3(keyframes[0]['pose']), prior_noise))
+    graph.add(gtsam.PriorFactorPose3(0, se3_to_pose3(keyframes[0]['pose']), prior_noise))
 
     # add initial estimates for all poses (VO-derived starting point)
     print(f"Adding initial estimates for {n} keyframe poses...")
     for i, kf in enumerate(keyframes):
-        initial.insert(i, _se3_to_pose3(kf['pose']))
+        initial.insert(i, se3_to_pose3(kf['pose']))
 
     # odometry factors between consecutive keyframes
     print(f"Adding {n-1} odometry factors to graph...")
@@ -92,7 +76,7 @@ def build_pose_graph(keyframes, loops,
         T_world_b = keyframes[i + 1]['pose']
         # relative transform: T_a_to_b = T_world_a^-1 @ T_world_b
         T_a_to_b = invert_se3(T_world_a) @ T_world_b
-        graph.add(gtsam.BetweenFactorPose3(i, i + 1, _se3_to_pose3(T_a_to_b), odom_noise))
+        graph.add(gtsam.BetweenFactorPose3(i, i + 1, se3_to_pose3(T_a_to_b), odom_noise))
 
     # loop closure factors, weighed by inlier count
     print(f"Adding {len(loops)} loop closures to graph...")
@@ -114,7 +98,7 @@ def build_pose_graph(keyframes, loops,
         # T_a_to_b from verification step is already the relative transform from a to b
         graph.add(gtsam.BetweenFactorPose3(
             loop.kf_a, loop.kf_b, 
-            _se3_to_pose3(loop.T_a_to_b), 
+            se3_to_pose3(loop.T_a_to_b), 
             loop_noise,
         ))
         
@@ -126,5 +110,5 @@ def extract_poses(values, n):
     """Extract optimized poses as a (n, 4, 4) array of SE(3) matrices."""
     poses = np.zeros((n, 4, 4))
     for i in range(n):
-        poses[i] = _pose3_to_se3(values.atPose3(i))
+        poses[i] = pose3_to_se3(values.atPose3(i))
     return poses

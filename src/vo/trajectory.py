@@ -23,11 +23,3 @@ class Trajectory:
     
     def __len__(self):
         return len(self.poses)
-
-    def save_kitti(self, path):
-        """Save trajectory in KITTI format (3x4 row-major per line)."""
-        Path(path).parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "w") as f:
-            for pose in self.poses:
-                row = pose[:3, :].flatten() # take top 3 rows -> (3, 4) -> flatten to (12,)
-                f.write(" ".join(f"{x:.6e}" for x in row) + "\n")

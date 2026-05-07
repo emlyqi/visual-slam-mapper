@@ -14,36 +14,27 @@ against the full 1101-frame KITTI ground truth.
 import json
 from pathlib import Path
 import numpy as np
+import argparse
 
-from src.utils.config import parse_config_arg
+from src.utils.config import load_config
 from src.utils.transforms import invert_se3
+from src.utils.io import load_kitti_trajectory, save_kitti_trajectory
 from src.vo.keyframe_logger import load_keyframes
 
 
-def load_kitti_trajectory(path):
-    """Load (N, 4, 4) trajectory from KITTI format (one line per pose, 12 floats)."""
-    poses = []
-    with open(path, 'r') as f:
-        for line in f:
-            vals = [float(v) for v in line.split()]
-            T = np.eye(4)
-            T[:3, :4] = np.array(vals).reshape(3, 4)
-            poses.append(T)
-    return np.stack(poses)
-
-
-def save_kitti_trajectory(poses_4x4, output_path):
-    """Save (N, 4, 4) optimized poses in KITTI format (one line per pose, 12 floats)."""
-    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, 'w') as f:
-        for T in poses_4x4:
-            row = T[:3, :].flatten()
-            f.write(' '.join(f"{v:.6e}" for v in row) + '\n')
-
-
 def main():
-    cfg = parse_config_arg()
-
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", default="configs/kitti_05.yaml")
+    parser.add_argument("--input", default=None, help="Trajectory to interpolate (default: optimized.txt)")
+    parser.add_argument("--output", default=None, help="Output path (default: optimized_full.txt)")
+    args = parser.parse_args()
+    
+    cfg = load_config(args.config)
+    
+    # use provided paths or fall back to defaults
+    input_path = args.input if args.input else str(cfg.optimized_trajectory_path)
+    output_path = args.output if args.output else str(cfg.optimized_full_trajectory_path)
+    
     # load original VO trajectory (all 1101 frames)
     print("Loading original VO trajectory...")
     vo_poses = load_kitti_trajectory(str(cfg.vo_trajectory_path))
@@ -59,7 +50,7 @@ def main():
 
     # load optimized keyframe poses
     print("Loading optimized keyframe poses...")
-    optimized_kf_poses = load_kitti_trajectory(str(cfg.optimized_trajectory_path))
+    optimized_kf_poses = load_kitti_trajectory(input_path)
     assert len(optimized_kf_poses) == n_keyframes, \
         f"Expected {n_keyframes} optimized poses, got {len(optimized_kf_poses)}"
     print(f"  Loaded optimized poses for {len(optimized_kf_poses)} keyframes")
@@ -90,8 +81,7 @@ def main():
         full_poses[f] = optimized_kf_poses[kf] @ T_anchor_to_f
 
     # save
-    output_path = cfg.optimized_full_trajectory_path
-    save_kitti_trajectory(full_poses, str(output_path))
+    save_kitti_trajectory(full_poses, output_path)  # output_path already set above
     print(f"Saved {n_frames}-frame optimized trajectory to {output_path}")
 
 
